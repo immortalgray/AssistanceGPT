@@ -1,5 +1,5 @@
 
-HOME_DIR = '/home/student/gpt_bot'  # путь к папке с проектом
+HOME_DIR = '/home/student/AssistanceGPT'  # путь к папке с проектом
 LOGS = f'{HOME_DIR}/logs.txt'  # файл для логов
 DB_FILE = f'{HOME_DIR}/messages.db'  # файл для базы данных
 
