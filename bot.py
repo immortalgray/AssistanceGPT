@@ -1,4 +1,5 @@
 import telebot
+from telebot import types
 import logging
 from config import *
 from creds import get_bot_token
@@ -12,22 +13,106 @@ logging.basicConfig(filename=LOGS, level=logging.ERROR, format="%(asctime)s FILE
 
 bot = telebot.TeleBot(get_bot_token()) # создаём объект бота
 
+def menu_keyboard(options):
+    """Создаёт клавиатуру с указанными кнопками.""" # создаём клавиатуру
+    buttons = (types.KeyboardButton(text=option) for option in options)
+    keyboard = types.ReplyKeyboardMarkup(
+        row_width=2,
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    keyboard.add(*buttons)
+    return keyboard
+
 # обрабатываем команду /start
 @bot.message_handler(commands=['start'])
-def start(message):
+def start(message: telebot.types.Message):
     create_database()
     bot.send_message(message.from_user.id, "Привет! Отправь мне голосовое сообщение или текст, и я тебе отвечу!")
 
 # обрабатываем команду /help
 @bot.message_handler(commands=['help'])
-def help_command(message):
-    bot.send_message(message.from_user.id, "Чтобы приступить к общению, отправь мне голосовое сообщение или текст")
+def help_command(message: telebot.types.Message):
+    bot.send_message(message.from_user.id, "Чтобы приступить к общению, отправь мне голосовое сообщение или текст"
+                                           "Или используй кнопки для теста SpeechKit",
+                     reply_markup=menu_keyboard(["/stt","/tts"]))
 
 # обрабатываем команду /debug - отправляем файл с логами
 @bot.message_handler(commands=['debug'])
-def debug(message):
+def debug(message: telebot.types.Message):
     with open("logs.txt", "rb") as f:
         bot.send_document(message.chat.id, f)
+
+@bot.message_handler(commands=['tts'])
+def tts_handler(message: telebot.types.Message):
+    user_id = message.from_user.id
+    bot.send_message(user_id, 'Отправь следующим сообщением текст, чтобы я его озвучил!')
+    bot.register_next_step_handler(message, tts)
+
+
+def tts(message: telebot.types.Message):
+    user_id = message.from_user.id
+    text = message.text
+
+    # Проверка, что сообщение действительно текстовое
+    if message.content_type != 'text':
+        bot.send_message(user_id, 'Отправь текстовое сообщение')
+        bot.register_next_step_handler(message, tts)
+        return
+
+    # Считаем символы в тексте и проверяем сумму потраченных символов
+    tts_symbols, error_message = is_tts_symbol_limit(user_id, text)
+    if error_message:
+        bot.send_message(user_id, error_message)
+        return
+
+    # Получаем статус и содержимое ответа от SpeechKit
+    status, content = text_to_speech(text)
+
+    # Если статус True - отправляем голосовое сообщение, иначе - сообщение об ошибке
+    if status:
+        bot.send_voice(user_id, content, reply_to_message_id=message.id)
+        bot.send_message(user_id, "Всё работает", reply_markup=menu_keyboard(["/stt","/tts"]))
+    else:
+        bot.send_message(user_id, content)
+
+
+@bot.message_handler(commands=['stt'])
+def stt_handler(message: telebot.types.Message):
+    user_id = message.from_user.id
+    bot.send_message(user_id, 'Отправь голосовое сообщение, чтобы я его распознал!')
+    bot.register_next_step_handler(message, stt)
+
+
+# Переводим голосовое сообщение в текст после команды stt
+def stt(message: telebot.types.Message):
+    user_id = message.from_user.id
+
+    # Проверка, что сообщение действительно голосовое
+    if not message.voice:
+        bot.send_message(user_id, 'Отправь голосовое сообщение')
+        bot.register_next_step_handler(message, stt)
+        return
+
+    # Считаем аудиоблоки и проверяем сумму потраченных аудиоблоков
+    stt_blocks, error_message = is_stt_block_limit(user_id, message.voice.duration)
+    if error_message:
+        bot.send_message(user_id, error_message)
+        return
+
+    file_id = message.voice.file_id  # получаем id голосового сообщения
+    file_info = bot.get_file(file_id)  # получаем информацию о голосовом сообщении
+    file = bot.download_file(file_info.file_path)  # скачиваем голосовое сообщение
+
+    # Получаем статус и содержимое ответа от SpeechKit
+    status, text = speech_to_text(file)  # преобразовываем голосовое сообщение в текст
+
+    # Если статус True - отправляем текст сообщения, иначе - сообщение об ошибке
+    if status:
+        bot.send_message(user_id, text, reply_to_message_id=message.id)
+        bot.send_message(user_id, "Всё работает", reply_markup=menu_keyboard(["/stt","/tts"]))
+    else:
+        bot.send_message(user_id, text)
 
 
 # обрабатываем голосовые сообщения
