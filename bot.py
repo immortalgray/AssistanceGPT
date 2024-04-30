@@ -40,7 +40,7 @@ def help_command(message: telebot.types.Message):
 # обрабатываем команду /debug - отправляем файл с логами
 @bot.message_handler(commands=['debug'])
 def debug(message: telebot.types.Message):
-    with open("logs.txt", "rb") as f:
+    with open(LOGS, "rb") as f:
         bot.send_document(message.chat.id, f)
 
 @bot.message_handler(commands=['tts'])
