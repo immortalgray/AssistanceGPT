@@ -1,7 +1,6 @@
 import json
 import logging
 import time
-from datetime import datetime
 import requests
 from config import LOGS, IAM_TOKEN_PATH, FOLDER_ID_PATH, BOT_TOKEN_PATH
 
@@ -36,9 +35,9 @@ def get_creds():
         # чтение iam_token
         with open(IAM_TOKEN_PATH, 'r') as f:
             file_data = json.load(f)
-            expiration = datetime.strptime(file_data["expires_at"][:26], "%Y-%m-%dT%H:%M:%S.%f")
+            expiration = file_data["expires_at"]
         # если срок годности истёк
-        if expiration < datetime.now():
+        if expiration < time.time():
             logging.info("Срок годности iam_token истёк")
             # получаем новый iam_token
             create_new_token()
