@@ -6,10 +6,10 @@ from creds import get_creds
 # настраиваем запись логов в файл
 logging.basicConfig(filename=LOGS, level=logging.ERROR, format="%(asctime)s FILE: %(filename)s IN: %(funcName)s MESSAGE: %(message)s", filemode="w")
 
-iam_token, folder_id = get_creds()
 
 # подсчитываем количество токенов в сообщениях
 def count_gpt_tokens(messages):
+    iam_token, folder_id = get_creds()
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/tokenizeCompletion"
     headers = {
         'Authorization': f'Bearer {iam_token}',
@@ -27,6 +27,7 @@ def count_gpt_tokens(messages):
 
 # запрос к GPT
 def ask_gpt(messages):
+    iam_token, folder_id = get_creds()
     url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
     headers = {
         'Authorization': f'Bearer {iam_token}',
