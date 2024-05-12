@@ -1,10 +1,9 @@
 import requests
 from creds import get_creds
 
-iam_token, folder_id = get_creds()
-
 
 def text_to_speech(text: str):
+    iam_token, folder_id = get_creds()
     # Аутентификация через IAM-токен
     headers = {
         'Authorization': f'Bearer {iam_token}',
@@ -25,6 +24,7 @@ def text_to_speech(text: str):
 
 
 def speech_to_text(data):
+    iam_token, folder_id = get_creds()
     # Указываем параметры запроса
     params = "&".join([
         "topic=general",  # используем основную версию модели
